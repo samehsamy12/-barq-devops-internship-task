@@ -97,6 +97,31 @@ Use all three supplied logs. Answer every question with commands/scripts and act
 - Note: this successful request hit the SAME backend (app-02) five minutes before it went down,
   confirming app-02 was healthy at 11:00 and failed sometime before 11:05.
 
+### Q9: Proxy/connectivity errors vs dependency/application errors
+**Proxy/connectivity issues (NGINX <-> backend):**
+- Evidence: error.log shows "connect() failed (111: Connection refused)" (11:05-~11:20) and
+  "upstream timed out (110)" (11:25 onward), both targeting app-02 (172.23.0.12:8080)
+- Evidence: access.log shows 502 (Bad Gateway) and 504 (Gateway Timeout) responses directly
+  correlated with those error.log timestamps and the same upstream
+- Evidence: the failed example (lab-000122, Q8) has NO corresponding application.log entry —
+  proof the request never reached the app, confirming it's a proxy-layer failure, not an
+  application bug
+- Total: 40 (502) + 8 (504) = 48 requests attributable to proxy/connectivity issues (Q3 data)
+
+**Dependency/application issues:**
+- Evidence: application.log contains 47 "dependency_error" events with error_type=InvalidPassword,
+  dependency=postgres, occurring ~11:20:07 to ~11:21:45 — DIFFERENT time window than the
+  connection-refused phase (11:05-11:20)
+- These represent the application successfully receiving a request but failing to complete it
+  due to a downstream dependency (database credential) problem — a distinct failure mode from
+  NGINX being unable to reach the app at all
+- 503 (Service Unavailable, 47 occurrences, Q3 data) is the client-facing status most likely
+  correlated with this application-level dependency failure, based on matching counts (47 vs 47)
+
+**What proves the distinction:** presence/absence of an application.log entry for the same
+request_id, plus which log (error.log vs application.log) contains the failure detail, plus
+whether the timestamp falls in the "connection refused" window vs the "dependency_error" window.
+
 
 ## Timeline and correlated examples
 ## Conclusions and limits
