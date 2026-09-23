@@ -57,5 +57,15 @@ Use all three supplied logs. Answer every question with commands/scripts and act
   pulling the tail up, likely correlated with the app-02 outage window (to be confirmed against
   error.log timestamps in Q7/Q9)
 - Command: python3 scripts/analyze_logs.py (latency_percentiles function)
+
+### Q6: Retried requests and retry success rate
+- 19 requests retried upstream (upstream field contains comma-separated addresses)
+- All 19 (100%) succeeded after retry (final status < 400)
+- Pattern: every retry sample tried 172.23.0.12:8080 (app-02) FIRST, then fell back to
+  172.23.0.11:8080 (app-01) — consistent with app-02 being unavailable during the incident window
+- Open question for Stage 2 investigation: why did only 19 requests get an upstream retry while
+  95 other failed requests (Q3/Q4) received a direct 502/503/504 with no retry? Needs review of
+  NGINX upstream/retry configuration.
+- Command: python3 scripts/analyze_logs.py (retry_analysis function)
 ## Timeline and correlated examples
 ## Conclusions and limits

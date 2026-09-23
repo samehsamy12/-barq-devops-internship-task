@@ -111,6 +111,15 @@ def latency_percentiles(records):
     p95 = times[p95_index]
     return median, p95
 
+def retry_analysis(records):
+    retried = []
+    for r in records:
+        upstream = r.get("upstream", "")
+        if "," in upstream:
+            retried.append(r)
+    succeeded_after_retry = sum(1 for r in retried if r.get("status", 0) < 400)
+    return retried, succeeded_after_retry
+
 if __name__ == "__main__":
     access_records, access_malformed = load_access_log()
     print(f"[access.log] Valid: {len(access_records)}, Malformed: {access_malformed}")
@@ -149,3 +158,10 @@ if __name__ == "__main__":
 
     median, p95 = latency_percentiles(access_unique)
     print(f"[access.log] Median latency: {median*1000:.1f}ms, P95: {p95*1000:.1f}ms")
+
+    retried, succeeded = retry_analysis(access_unique)
+    print(f"[access.log] Requests that retried upstream: {len(retried)}")
+    print(f"[access.log] Succeeded after retry: {succeeded}")
+    for r in retried[:5]:
+        print(f"  Sample retry: request_id={r['request_id']}, upstream={r['upstream']}, status={r['status']}")
+
