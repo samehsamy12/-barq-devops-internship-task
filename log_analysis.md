@@ -67,5 +67,21 @@ Use all three supplied logs. Answer every question with commands/scripts and act
   95 other failed requests (Q3/Q4) received a direct 502/503/504 with no retry? Needs review of
   NGINX upstream/retry configuration.
 - Command: python3 scripts/analyze_logs.py (retry_analysis function)
+
+### Q7: Incident timeline (correlated across access, error, application logs)
+- 11:05:02Z: First 502 errors begin appearing for app-02 (172.23.0.12), cycling through
+  /health, /records, /counter, / every ~5-10 seconds
+- 11:05-~11:20: Repeated "connect() failed (111: Connection refused)" in error.log for app-02
+  -> app-02 process appears to be down/unreachable (TCP connection actively refused)
+- ~11:20:07 onward: application.log shows dependency_error events (InvalidPassword) against
+  postgres, overlapping with the app-02 outage window
+- 11:25:14 onward: error.log pattern shifts to "upstream timed out (110)" instead of
+  "connection refused" -> suggests app-02 came back up but was slow/unresponsive rather than
+  fully down, consistent with the P95 latency spike (~2001ms) found in Q5
+- 11:30:00: "log collector rotated stream" notice marks end of captured log window (not
+  necessarily end of incident, just end of this log file's time range)
+- Command: python3 scripts/analyze_logs.py (build_timeline function, cross-referencing all 3 logs)
+
+
 ## Timeline and correlated examples
 ## Conclusions and limits

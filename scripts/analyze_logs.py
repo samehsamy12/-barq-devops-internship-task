@@ -1,4 +1,5 @@
 import json
+import re
 
 BASE = "../logs"
 
@@ -18,6 +19,7 @@ def load_access_log():
                 malformed += 1
                 print(f"Malformed line {line_number}: {line[:80]}")
     return valid, malformed
+
 def load_application_log():
     path = f"{BASE}/application.log"
     valid = []
@@ -34,6 +36,7 @@ def load_application_log():
                 malformed += 1
                 print(f"Malformed line {line_number}: {line[:80]}")
     return valid, malformed
+
 def load_error_log():
     path = f"{BASE}/error.log"
     lines = []
@@ -44,6 +47,7 @@ def load_error_log():
                 continue
             lines.append(line)
     return lines
+
 def get_time_range(records):
     timestamps = [r["timestamp"] for r in records if "timestamp" in r]
     if not timestamps:
@@ -120,6 +124,28 @@ def retry_analysis(records):
     succeeded_after_retry = sum(1 for r in retried if r.get("status", 0) < 400)
     return retried, succeeded_after_retry
 
+def parse_error_log_timeline(error_lines):
+    events = []
+    pattern = re.compile(r"^(\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2})")
+    for line in error_lines:
+        match = pattern.match(line)
+        if match:
+            events.append((match.group(1), line))
+    return events
+
+def build_timeline(access_unique, app_unique, error_lines):
+    timeline = []
+    for r in access_unique:
+        if r.get("status", 0) >= 500:
+            timeline.append((r["timestamp"], "access", f"status={r['status']} path={r.get('path')} upstream={r.get('upstream')}"))
+    for r in app_unique:
+        if r.get("event") == "dependency_error":
+            timeline.append((r["timestamp"], "application", f"dependency_error dependency={r.get('dependency')} error_type={r.get('error_type')}"))
+    for ts, line in parse_error_log_timeline(error_lines):
+        timeline.append((ts, "error", line[:100]))
+    timeline.sort(key=lambda x: x[0])
+    return timeline
+
 if __name__ == "__main__":
     access_records, access_malformed = load_access_log()
     print(f"[access.log] Valid: {len(access_records)}, Malformed: {access_malformed}")
@@ -165,3 +191,7 @@ if __name__ == "__main__":
     for r in retried[:5]:
         print(f"  Sample retry: request_id={r['request_id']}, upstream={r['upstream']}, status={r['status']}")
 
+    timeline = build_timeline(access_unique, app_unique, error_lines)
+    print(f"\n=== TIMELINE (last 15 events) ===")
+    for ts, source, detail in timeline[-15:]:
+        print(f"{ts} [{source}] {detail}")
