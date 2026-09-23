@@ -82,6 +82,21 @@ Use all three supplied logs. Answer every question with commands/scripts and act
   necessarily end of incident, just end of this log file's time range)
 - Command: python3 scripts/analyze_logs.py (build_timeline function, cross-referencing all 3 logs)
 
+### Q8: One correlated failed request and one successful request
+**Failed request: lab-000122**
+- access.log: 11:05:02.503Z, GET /health, status=502, upstream=172.23.0.12:8080, request_time=0.003s
+- error.log: 11:05:02, "connect() failed (111: Connection refused)" targeting
+  http://172.23.0.12:8080/health, request_id=lab-000122
+- application.log: NO RECORD FOUND — the request never reached the application layer;
+  it failed at the NGINX/proxy level before hitting app-02.
+
+**Successful request: lab-000002**
+- access.log: 11:00:02.532Z, GET /health, status=200, upstream=172.23.0.12:8080, request_time=0.032s
+- error.log: no record (expected, request succeeded)
+- application.log: 11:00:02.532Z, event=http_request, instance_id=app-02, status=200, duration_ms=32.0
+- Note: this successful request hit the SAME backend (app-02) five minutes before it went down,
+  confirming app-02 was healthy at 11:00 and failed sometime before 11:05.
+
 
 ## Timeline and correlated examples
 ## Conclusions and limits
