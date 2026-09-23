@@ -12,3 +12,15 @@
 - **Root Cause:** Mismatch between the probe path in `docker-compose.yml` (`/healthz`) and the implemented Flask route (`/health`).
 - **Fix:** Updated `docker-compose.yml` healthcheck test command to send requests to `/health`.
 - **Verification:** Ran `docker compose up -d` and confirmed via `docker compose ps` that both `app-01` and `app-02` status changed to `(healthy)`.
+
+## Issue #2: NGINX Port Binding and Upstream Connection Failures
+
+### Root Cause
+1. **Port Mismatch in Docker Compose**: `docker-compose.yml` forwarded host port `8080` to port `81` inside the NGINX container, whereas NGINX was configured to listen on port `80` in `nginx/nginx.conf`.
+2. **Incorrect Upstream Port**: In `nginx/nginx.conf`, the `upstream` pool configured `app-01` to use port `8081` instead of `8080`.
+3. **Loopback Binding Restriction**: In `docker-compose.yml`, `APP_HOST` was set to `127.0.0.1`, which caused Flask application containers (`app-01` and `app-02`) to accept connections only from `localhost` inside their own containers, rejecting requests proxied by NGINX with `Connection refused`.
+
+### Solution Applied
+1. Updated `docker-compose.yml` NGINX port mapping from `"127.0.0.1:${PUBLIC_PORT:-8080}:81"` to `"127.0.0.1:${PUBLIC_PORT:-8080}:80"`.
+2. Fixed `nginx/nginx.conf` upstream block by updating `app-01:8081` to `app-01:8080`.
+3. Modified `APP_HOST` in `docker-compose.yml` from `127.0.0.1` to `0.0.0.0` to allow inter-container connectivity over the Docker network.
