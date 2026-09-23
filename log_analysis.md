@@ -47,5 +47,15 @@ Use all three supplied logs. Answer every question with commands/scripts and act
   supporting the error.log finding that app-02 experienced a connectivity outage during the incident.
 - Command: python3 scripts/analyze_logs.py (failures_breakdown function)
 
+### Q5: Median and p95 client latency
+- Method: request_time field (seconds) from access.log, deduplicated records only, nearest-rank
+  percentile method (index = 0.95 * (n-1) after sorting)
+- Median latency: 54.0ms
+- P95 latency: 2001.0ms
+- Units: milliseconds (converted from request_time, which is in seconds per logs/README.md)
+- Observation: ~37x gap between median and p95 suggests a small subset of very slow requests
+  pulling the tail up, likely correlated with the app-02 outage window (to be confirmed against
+  error.log timestamps in Q7/Q9)
+- Command: python3 scripts/analyze_logs.py (latency_percentiles function)
 ## Timeline and correlated examples
 ## Conclusions and limits

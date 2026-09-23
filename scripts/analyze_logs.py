@@ -101,6 +101,16 @@ def failures_breakdown(records):
         by_backend[backend] = by_backend.get(backend, 0) + 1
     return by_path, by_backend
 
+def latency_percentiles(records):
+    times = sorted(r["request_time"] for r in records if "request_time" in r)
+    if not times:
+        return None, None
+    n = len(times)
+    median = times[n // 2] if n % 2 == 1 else (times[n // 2 - 1] + times[n // 2]) / 2
+    p95_index = int(0.95 * (n - 1))
+    p95 = times[p95_index]
+    return median, p95
+
 if __name__ == "__main__":
     access_records, access_malformed = load_access_log()
     print(f"[access.log] Valid: {len(access_records)}, Malformed: {access_malformed}")
@@ -136,3 +146,6 @@ if __name__ == "__main__":
     by_path, by_backend = failures_breakdown(access_unique)
     print(f"[access.log] Failures by path: {by_path}")
     print(f"[access.log] Failures by backend: {by_backend}")
+
+    median, p95 = latency_percentiles(access_unique)
+    print(f"[access.log] Median latency: {median*1000:.1f}ms, P95: {p95*1000:.1f}ms")
