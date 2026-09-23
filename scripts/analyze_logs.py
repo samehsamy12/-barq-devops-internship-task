@@ -66,6 +66,28 @@ def find_duplicates(records):
             seen[key] = True
     return duplicates
 
+def deduplicate(records):
+    seen = set()
+    unique = []
+    for r in records:
+        key = json.dumps(r, sort_keys=True)
+        if key not in seen:
+            seen.add(key)
+            unique.append(r)
+    return unique
+
+def status_summary(records):
+    counts = {}
+    for r in records:
+        status = r.get("status")
+        if status is None:
+            continue
+        counts[status] = counts.get(status, 0) + 1
+    total = sum(counts.values())
+    errors = sum(v for k, v in counts.items() if k >= 400)
+    error_rate = (errors / total * 100) if total else 0
+    return counts, total, errors, error_rate
+
 if __name__ == "__main__":
     access_records, access_malformed = load_access_log()
     print(f"[access.log] Valid: {len(access_records)}, Malformed: {access_malformed}")
@@ -87,3 +109,13 @@ if __name__ == "__main__":
 
     app_dupes = find_duplicates(app_records)
     print(f"[application.log] Duplicate request_ids: {app_dupes}")
+
+    access_unique = deduplicate(access_records)
+    print(f"[access.log] Distinct client requests: {len(access_unique)}")
+
+    app_unique = deduplicate(app_records)
+    print(f"[application.log] Distinct records (after exact dedup): {len(app_unique)}")
+
+    counts, total, errors, rate = status_summary(access_unique)
+    print(f"[access.log] Status counts (deduplicated): {counts}")
+    print(f"[access.log] Total: {total}, Errors (>=400): {errors}, Error rate: {rate:.2f}%")
