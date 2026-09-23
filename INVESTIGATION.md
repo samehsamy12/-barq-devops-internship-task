@@ -24,3 +24,19 @@
 1. Updated `docker-compose.yml` NGINX port mapping from `"127.0.0.1:${PUBLIC_PORT:-8080}:81"` to `"127.0.0.1:${PUBLIC_PORT:-8080}:80"`.
 2. Fixed `nginx/nginx.conf` upstream block by updating `app-01:8081` to `app-01:8080`.
 3. Modified `APP_HOST` in `docker-compose.yml` from `127.0.0.1` to `0.0.0.0` to allow inter-container connectivity over the Docker network.
+
+## Issue #3: Network Isolation, Volume Persistence, and Environment Hardening
+
+### Root Cause
+1. **Unnecessary Port Exposure**: Database (15432) and Cache (16379) ports were directly exposed to the host machine.
+2. **Improper Network Segmentation**: NGINX was attached to the `backend` network, violating isolation boundaries.
+3. **Volatile Database Storage**: PostgreSQL utilized `tmpfs` for data directory instead of persistent volume mapping.
+4. **Redis Persistence Disabled**: Redis configuration explicitly set `--appendonly no`.
+5. **Configuration Typo**: `app-02` container inherited `INSTANCE_ID: "app-01"`.
+
+### Solution Applied
+1. Removed direct port publishing for `postgres` and `redis`, keeping only NGINX exposed on port 8080[cite: 1].
+2. Restricted NGINX to the `frontend` network and enabled `internal: true` on the `backend` network[cite: 1].
+3. Updated PostgreSQL volume mapping to `/var/lib/postgresql/data` and removed `tmpfs`.
+4. Enabled Redis AOF persistence via `--appendonly yes`[cite: 1].
+5. Corrected `INSTANCE_ID` for `app-02` and created a clean `.env.example` file[cite: 1].
