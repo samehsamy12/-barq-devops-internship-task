@@ -88,6 +88,19 @@ def status_summary(records):
     error_rate = (errors / total * 100) if total else 0
     return counts, total, errors, error_rate
 
+def failures_breakdown(records):
+    by_path = {}
+    by_backend = {}
+    for r in records:
+        status = r.get("status", 0)
+        if status < 400:
+            continue
+        path = r.get("path", "unknown")
+        backend = r.get("upstream", "unknown")
+        by_path[path] = by_path.get(path, 0) + 1
+        by_backend[backend] = by_backend.get(backend, 0) + 1
+    return by_path, by_backend
+
 if __name__ == "__main__":
     access_records, access_malformed = load_access_log()
     print(f"[access.log] Valid: {len(access_records)}, Malformed: {access_malformed}")
@@ -119,3 +132,7 @@ if __name__ == "__main__":
     counts, total, errors, rate = status_summary(access_unique)
     print(f"[access.log] Status counts (deduplicated): {counts}")
     print(f"[access.log] Total: {total}, Errors (>=400): {errors}, Error rate: {rate:.2f}%")
+
+    by_path, by_backend = failures_breakdown(access_unique)
+    print(f"[access.log] Failures by path: {by_path}")
+    print(f"[access.log] Failures by backend: {by_backend}")

@@ -36,5 +36,16 @@ Use all three supplied logs. Answer every question with commands/scripts and act
 - Errors (status >= 400): 105
 - Error rate: 14.58%
 - Command: python3 scripts/analyze_logs.py (status_summary function)
+
+### Q4: Failures by path, time window, and backend
+- Failures by path (status >= 400, n=105): {/records: 26, /counter: 26, /ready: 23,
+  /missing: 10, /health: 10, /: 10}
+- Note: /missing is expected to fail (nonexistent route, likely all 404s) — not a real issue.
+  /records, /counter, /ready are real required endpoints with disproportionately high failure counts.
+- Failures by backend: app-01 (172.23.0.11:8080) = 32 failures, app-02 (172.23.0.12:8080) = 73 failures
+- app-02 accounts for more than double the failures of app-01 -> strong quantitative evidence
+  supporting the error.log finding that app-02 experienced a connectivity outage during the incident.
+- Command: python3 scripts/analyze_logs.py (failures_breakdown function)
+
 ## Timeline and correlated examples
 ## Conclusions and limits
