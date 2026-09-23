@@ -122,6 +122,28 @@ Use all three supplied logs. Answer every question with commands/scripts and act
 request_id, plus which log (error.log vs application.log) contains the failure detail, plus
 whether the timestamp falls in the "connection refused" window vs the "dependency_error" window.
 
+### Q10: What the logs do not prove / what to check next in a running environment
+**What the logs do NOT prove:**
+- WHY app-02 became unreachable (process crash, OOM kill, container restart, network partition,
+  resource exhaustion) — error.log only shows the symptom (connection refused / timeout), not
+  the root cause on the app-02 side
+- Whether the postgres InvalidPassword errors (11:20-11:21) were caused by the SAME incident as
+  the app-02 outage, or a separate, coincidentally overlapping issue — the logs show correlation
+  in time but not a confirmed causal link
+- Whether app-02 fully recovered after 11:30 (the log window ends there) — we only know the
+  timeout pattern continued through the end of the captured window
+- The actual NGINX upstream/retry configuration (max_fails, fail_timeout, proxy_next_upstream
+  settings) that explains why only 19 of many failed requests received an automatic retry
+- Current state of the running environment — these are historical/synthetic logs, not live data
 
+**What to check next in a running environment:**
+- `docker ps` / `docker logs app-02` (or equivalent container name) to see actual crash/restart
+  evidence and exit codes around 11:05 and 11:25
+- NGINX config (nginx.conf) for upstream block settings: retry policy, timeouts, health checks
+- PostgreSQL logs/config around 11:20 to confirm whether a credential rotation, restart, or
+  config change caused the InvalidPassword errors
+- Container resource usage/limits (docker stats) to rule out OOM as a root cause
+- Whether a health check or restart policy exists that would have auto-recovered app-02, and
+  whether it worked as intended
 ## Timeline and correlated examples
 ## Conclusions and limits
