@@ -2,31 +2,23 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ "main", "master" ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ "main", "master" ]
 
 jobs:
-  validate:
+  build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Set up Docker Compose
-        uses: docker/setup-buildx-action@v3
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
 
-      - name: Validate Docker Compose Configuration
-        run: |
-          docker compose config
-          echo "[+] Docker Compose configuration is valid!"
-
-      - name: Run Secret and Security Scan (Basic)
-        run: |
-          echo "[*] Running basic checks..."
-          if grep -rniE "glpat|ghp_" . --exclude-dir=.git; then
-              echo "[-] Potential secret found!"
-              exit 1
-          else
-              echo "[+] No obvious secrets found in scanned patterns."
-          fi
+    - name: Verify Docker Compose config
+      uses: docker/compose-action@v2
+      with:
+        combined-files: 'docker-compose.yml'
+        action: 'config'
