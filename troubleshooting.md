@@ -58,3 +58,16 @@ Do not fabricate a failed attempt just to fill the template. Record actual attem
 - Remaining uncertainty: Whether this was the ONLY cause of the historical incident in the log files
   (Q1-Q10 analysis), or a separate/additional misconfiguration — the log incident's root cause on the
   app-02 container side is still not fully confirmed (see log_analysis.md Q10).
+
+## Entry 4 / 2026-09-24 / (endpoint verification)
+- Symptom: N/A — proactive verification after fixing app.env.
+- Command or test: Tested all required endpoints: /, /health, /ready, /instance, /records (GET+POST), /counter
+- Actual output: All endpoints return 200 with expected data. /records POST required field "title"
+  (not "name") - confirmed via error message, then successful insert (id:3) persisted and visible
+  in subsequent GET. /counter returns incrementing Redis-backed value. Looped 6x on /instance:
+  confirmed alternating app-02/app-01/app-02/app-01/app-02/app-01 - NGINX load balancing confirmed working.
+- Root cause: N/A (verification, not a bug)
+- Fix: N/A
+- Retest evidence: All curl commands and outputs documented above.
+- Related commit: (to be added)
+- Remaining uncertainty: None for this verification step.
