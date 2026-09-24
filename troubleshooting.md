@@ -37,3 +37,24 @@ Do not fabricate a failed attempt just to fill the template. Record actual attem
 - Retest evidence: Verified via independent `grep` + manual inspection of all 5 flagged pairs — all confirmed identical.
 - Related commit: (to be added)
 - Remaining uncertainty: Root cause of the periodic duplication (NGINX log flush behavior vs external healthcheck) not confirmed — would need live environment access to verify.
+
+## Entry 3 / 2026-09-24 / (app.env credentials/ports mismatch)
+- Symptom: /ready endpoint returned {"postgres":"unavailable","redis":"unavailable"}, status 503.
+  app-01 logs showed OperationalError (postgres) and ConnectionError (redis).
+- Hypothesis: config/app.env credentials/ports did not match docker-compose.yml / actual service ports.
+- Command or test: `cat config/app.env` compared against docker-compose.yml POSTGRES_PASSWORD and
+  default Postgres/Redis ports.
+- Actual output: app.env had DATABASE_URL password ending "...vK8d" (docker-compose.yml has "...vK8c"),
+  postgres port 5433 (actual: 5432), REDIS_URL port 6380 (actual: 6379). Three mismatches in two lines.
+- Failed attempt and what changed your thinking: First tried `docker compose restart app-01 app-02`
+  after fixing app.env — still failed with same error. Learned that `restart` does not reload env_file
+  contents; the container must be recreated with `--force-recreate` (or `up -d`) to pick up new env vars.
+- Root cause: config/app.env had an incorrect Postgres password (typo) and incorrect hardcoded ports
+  for both Postgres (5433 vs actual 5432) and Redis (6380 vs actual 6379).
+- Fix: Corrected config/app.env to use the matching password (BarqLabOnly_7qN2vK8c) and correct
+  default ports (postgres:5432, redis:6379). Recreated containers with `docker compose up -d --force-recreate`.
+- Retest evidence: curl localhost:8080/ready now returns {"postgres":"ready","redis":"ready","status":"ready"}.
+- Related commit: (to be added)
+- Remaining uncertainty: Whether this was the ONLY cause of the historical incident in the log files
+  (Q1-Q10 analysis), or a separate/additional misconfiguration — the log incident's root cause on the
+  app-02 container side is still not fully confirmed (see log_analysis.md Q10).
