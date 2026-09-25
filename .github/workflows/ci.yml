@@ -18,7 +18,7 @@ jobs:
 
       - name: Run Secret and Security Scan (Basic)
         run: |
-                              if grep -rniE "glpat|ghp_" . --exclude-dir=.git --exclude="*.md" --exclude-dir=.github | grep -v "grep -rniE"; then
+                 if grep -rniE "glpat|ghp_" --exclude-dir=.git --exclude-dir=.github --exclude="*.md" .; then
               echo "[-] Potential secret found!"
               exit 1
           else
