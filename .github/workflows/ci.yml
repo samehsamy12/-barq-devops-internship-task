@@ -1,0 +1,55 @@
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate Docker Compose Configuration
+        run: |
+          docker compose config
+          echo "[+] Docker Compose configuration is valid!"
+
+      - name: Run Secret and Security Scan (Basic)
+        run: |
+          if grep -rniE "glpat|ghp_" . --exclude-dir=.git; then
+              echo "[-] Potential secret found!"
+              exit 1
+          else
+              echo "[+] No obvious secrets found."
+          fi
+
+      - name: Build images
+        run: docker compose build
+
+      - name: Start environment
+        run: docker compose up -d
+
+      - name: Wait for readiness
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8080/ready > /dev/null; then
+              echo "[+] Environment ready"
+              exit 0
+            fi
+            echo "Waiting for readiness... ($i/30)"
+            sleep 2
+          done
+          echo "[-] Environment did not become ready in time"
+          docker compose logs
+          exit 1
+
+      - name: Run validation script
+        run: |
+          chmod +x validate.sh
+          ./validate.sh
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs
